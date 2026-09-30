@@ -13,6 +13,7 @@ on:
 
 jobs:
   build_docs:
+    if: github.repository_owner == 'uc-cdis'
     runs-on: ubuntu-latest
 
     steps:
