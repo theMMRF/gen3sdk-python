@@ -20,7 +20,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.9, <4"
 requests = "*"
-indexclient = "^2.3.0"
+indexclient = {git = "https://github.com/theMMRF/indexclient.git", rev = "b2701e2337cdebb052b6546e92db256042af9ca8"}
 drsclient = ">=0.3.0"
 aiohttp = "*"
 backoff = "*"
