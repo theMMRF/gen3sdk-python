@@ -18,12 +18,16 @@ pytestmark = pytest.mark.skipif(
 RESOURCE = "/programs/MMRF/projects/private-sdk-test"
 
 
-@pytest.fixture
-def records():
+@pytest.fixture(autouse=True)
+def loopback_only():
     assert urlsplit(URL).hostname in (
         "localhost",
         "127.0.0.1",
     ), "This fixture only writes to loopback test servers"
+
+
+@pytest.fixture
+def records():
     admin = Gen3Index(URL, auth_provider=("test", "test"), service_location="")
     private = admin.create_record(
         {"md5": "a" * 32},

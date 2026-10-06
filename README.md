@@ -65,8 +65,10 @@ queries. Anonymous calls remain anonymous. Optional `visibility="restricted"`
 on create/update/version methods uses the same IndexD API and requires nonempty
 `authz`; omitted version visibility inherits the existing record. Gen3 file
 retrieval and signed downloads continue through the standard Fence paths.
-The paired IndexD service filters restricted metadata using existing download
-grants. This SDK pins the reviewed MMRF indexclient revision so a normal install
+The paired IndexD service filters restricted metadata using `indexd/read-metadata`
+on every authz resource. Fence separately checks `fence/read-storage` for file
+contents. Assign these roles independently; neither action implies the other.
+Existing records and omitted visibility stay public by default. This SDK pins the reviewed MMRF indexclient revision so a normal install
 cannot silently use the older client that dropped credentials on GET.
 
 Isolated transport coverage: `pytest --noconftest tests/test_index_visibility.py`.
