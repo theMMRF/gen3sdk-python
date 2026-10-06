@@ -94,3 +94,25 @@ def test_blank_record_can_be_restricted_before_upload():
         body = json.loads(post.call_args.kwargs["data"])
         assert body["visibility"] == "restricted"
         assert body["authz"] == ["/private"]
+
+
+def test_get_all_records_authenticates_every_page():
+    """A restricted second-page record must survive the normal SDK paginator."""
+    auth = Gen3Auth(endpoint="https://commons.example", access_token="test-token")
+    index = Gen3Index(auth)
+    pages = [
+        [{"did": "public", "visibility": "public"}],
+        [{"did": "private", "visibility": "restricted"}],
+        [],
+    ]
+    responses = []
+    for records in pages:
+        response = MagicMock(status_code=200)
+        response.json.return_value = {"records": records}
+        responses.append(response)
+    with patch("indexclient.client.requests.get", side_effect=responses) as get:
+        assert index.get_all_records(limit=1, paginate=True) == pages[0] + pages[1]
+        assert get.call_count == 3
+        assert all(call.kwargs["auth"] is auth for call in get.call_args_list)
+        assert "start=public" in get.call_args_list[1].args[0]
+        assert "start=private" in get.call_args_list[2].args[0]
