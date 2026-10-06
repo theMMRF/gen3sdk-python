@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from gen3.auth import Gen3Auth
 from gen3.file import Gen3File
 
@@ -50,3 +51,30 @@ def test_discovery_does_not_bypass_a_denied_signed_download(tmp_path):
         get.assert_not_called()
         index.assert_not_called()
         assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("status", [403, 500, 503, None])
+def test_download_single_only_suppresses_metadata_forbidden(tmp_path, status):
+    content = b"approved download"
+    file = Gen3File(Gen3Auth(endpoint="https://commons.example", access_token="caller"))
+    response = MagicMock(status_code=200, headers={"content-length": str(len(content))})
+    response.iter_content.return_value = iter([content])
+    error = requests.HTTPError(
+        response=MagicMock(status_code=status) if status else None
+    )
+    index = MagicMock()
+    index.get_record.side_effect = error
+    with patch.object(
+        file,
+        "get_presigned_url",
+        return_value={"url": "https://objects.example/approved"},
+    ), patch("gen3.file.requests.get", return_value=response), patch(
+        "gen3.file.Gen3Index", return_value=index
+    ):
+        if status == 403:
+            assert file.download_single("dg.MMRF/private-guid", tmp_path) is True
+            assert (tmp_path / "private-guid").read_bytes() == content
+        else:
+            with pytest.raises(requests.HTTPError):
+                file.download_single("dg.MMRF/private-guid", tmp_path)
+            assert list(tmp_path.iterdir()) == []

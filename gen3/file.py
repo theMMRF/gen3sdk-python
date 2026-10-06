@@ -200,7 +200,12 @@ class Gen3File:
         total_downloaded = 0
 
         index = Gen3Index(self._auth_provider)
-        record = index.get_record(object_id)
+        try:
+            record = index.get_record(object_id)
+        except requests.HTTPError as error:
+            if error.response is None or error.response.status_code != 403:
+                raise
+            record = None
 
         # Storage authorization can be granted independently of metadata visibility.
         # A hidden record returns None; its known GUID remains a safe local name.
