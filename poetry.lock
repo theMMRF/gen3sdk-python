@@ -1633,8 +1633,8 @@ requests = ">=2.5.2,<3.0.0"
 [package.source]
 type = "git"
 url = "https://github.com/theMMRF/indexclient.git"
-reference = "3fa49462f05c8eed743a4b191bfb3ce38b250338"
-resolved_reference = "3fa49462f05c8eed743a4b191bfb3ce38b250338"
+reference = "a0d4008f5d070c1b978dd24ffdb458ede9d7cd19"
+resolved_reference = "a0d4008f5d070c1b978dd24ffdb458ede9d7cd19"
 
 [[package]]
 name = "indexd"
@@ -3323,4 +3323,4 @@ fhir = ["fhirclient"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "4e2757491054391cdfe1e9a76b27f2919ed8331493acf7d0dd198437042c6674"
+content-hash = "c5de7da4c6e4b3f21130bafb8a6b29b0927d2a09150f9b0889542061bba9a19f"

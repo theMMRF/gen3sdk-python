@@ -68,7 +68,9 @@ retrieval and signed downloads continue through the standard Fence paths.
 The paired IndexD service filters restricted metadata using `indexd/read-metadata`
 on every authz resource. Fence separately checks `fence/read-storage` for file
 contents. Assign these roles independently; neither action implies the other.
-Existing records and omitted visibility stay public by default. This SDK pins the reviewed MMRF indexclient revision so a normal install
+Existing records and omitted visibility stay public by default.
+`Gen3File.download_single` uses the GUID as its local filename when the caller
+may download a known file but cannot discover its metadata. This SDK pins the reviewed MMRF indexclient revision so a normal install
 cannot silently use the older client that dropped credentials on GET.
 
 Isolated transport coverage: `pytest --noconftest tests/test_index_visibility.py`.

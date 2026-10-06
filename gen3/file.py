@@ -186,9 +186,9 @@ class Gen3File:
                     # NOTE could be updated with exponential backoff
                     time.sleep(1)
                     response = requests.get(url["url"], stream=True)
-                    if response.status == 200:
+                    if response.status_code == 200:
                         break
-                if response.status != 200:
+                if response.status_code != 200:
                     logging.critical("Response status not 200, try again later")
                     return False
             else:
@@ -202,7 +202,9 @@ class Gen3File:
         index = Gen3Index(self._auth_provider)
         record = index.get_record(object_id)
 
-        filename = record["file_name"]
+        # Storage authorization can be granted independently of metadata visibility.
+        # A hidden record returns None; its known GUID remains a safe local name.
+        filename = (record or {}).get("file_name") or object_id.rsplit("/", 1)[-1]
 
         out_path = Gen3File._ensure_dirpath_exists(Path(path))
 
