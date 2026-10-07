@@ -78,3 +78,45 @@ def test_download_single_only_suppresses_metadata_forbidden(tmp_path, status):
             with pytest.raises(requests.HTTPError):
                 file.download_single("dg.MMRF/private-guid", tmp_path)
             assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("statuses", [(503, 503, 200), (503, 503, 503), (404,)])
+def test_download_closes_failed_streams_before_retry_and_on_exhaustion(
+    tmp_path, statuses
+):
+    content = b"approved download"
+    file = Gen3File(Gen3Auth(endpoint="https://commons.example", access_token="caller"))
+    responses = [
+        MagicMock(status_code=status, headers={"content-length": str(len(content))})
+        for status in statuses
+    ]
+    for response in responses:
+        response.iter_content.return_value = iter([content])
+    requested = []
+
+    def request(*args, **kwargs):
+        if requested:
+            requested[-1].close.assert_called_once_with()
+        response = responses[len(requested)]
+        requested.append(response)
+        return response
+
+    with patch.object(
+        file, "get_presigned_url", return_value={"url": "https://objects.example/file"}
+    ), patch("gen3.file.requests.get", side_effect=request), patch(
+        "gen3.file.Gen3Index"
+    ) as index, patch("gen3.file.time.sleep"), patch("gen3.file.MAX_RETRIES", 2):
+        index.return_value.get_record.return_value = None
+        success = statuses[-1] == 200
+        assert file.download_single("private-guid", tmp_path) is success
+        assert len(requested) == len(responses)
+        for response in responses:
+            if response.status_code == 200:
+                response.close.assert_not_called()
+            else:
+                response.close.assert_called_once_with()
+        if success:
+            assert (tmp_path / "private-guid").read_bytes() == content
+        else:
+            index.assert_not_called()
+            assert list(tmp_path.iterdir()) == []

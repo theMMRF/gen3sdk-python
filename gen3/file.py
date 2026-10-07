@@ -182,6 +182,7 @@ class Gen3File:
             logging.error(f"Response code: {response.status_code}")
             if response.status_code >= 500:
                 for _ in range(MAX_RETRIES):
+                    response.close()
                     logging.info("Retrying now...")
                     # NOTE could be updated with exponential backoff
                     time.sleep(1)
@@ -190,8 +191,10 @@ class Gen3File:
                         break
                 if response.status_code != 200:
                     logging.critical("Response status not 200, try again later")
+                    response.close()
                     return False
             else:
+                response.close()
                 return False
 
         response.raise_for_status()
