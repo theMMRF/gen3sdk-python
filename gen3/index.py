@@ -418,7 +418,6 @@ class Gen3Index:
         description=None,
         content_created_date=None,
         content_updated_date=None,
-        visibility=None,
     ):
         """
 
@@ -461,8 +460,6 @@ class Gen3Index:
             "content_created_date": content_created_date,
             "content_updated_date": content_updated_date,
         }
-        if visibility is not None:
-            json["visibility"] = visibility
         if did:
             json["did"] = did
         rec = self.client.create(**json)
@@ -487,7 +484,6 @@ class Gen3Index:
         description=None,
         content_created_date=None,
         content_updated_date=None,
-        visibility=None,
     ):
         """
         Asynchronous function to create a record in indexd.
@@ -522,8 +518,6 @@ class Gen3Index:
                 "size": size,
                 "urls": urls or [],
             }
-            if visibility is not None:
-                json["visibility"] = visibility
             if did:
                 json["did"] = did
             if file_name:
@@ -562,7 +556,7 @@ class Gen3Index:
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def create_blank(self, uploader, file_name=None, authz=None, visibility=None):
+    def create_blank(self, uploader, file_name=None, authz=None):
         """
 
         Create a blank record
@@ -579,7 +573,6 @@ class Gen3Index:
             "uploader": uploader,
             "file_name": file_name,
             "authz": authz,
-            "visibility": visibility,
         }
         response = self.client._post(
             "index/blank",
@@ -609,7 +602,6 @@ class Gen3Index:
         description=None,
         content_created_date=None,
         content_updated_date=None,
-        visibility=None,
     ):
         """
 
@@ -660,7 +652,6 @@ class Gen3Index:
             "description": description,
             "content_created_date": content_created_date,
             "content_updated_date": content_updated_date,
-            "visibility": visibility,
         }
         if did:
             json["did"] = did
@@ -754,7 +745,6 @@ class Gen3Index:
         description=None,
         content_created_date=None,
         content_updated_date=None,
-        visibility=None,
     ):
         """
 
@@ -779,7 +769,6 @@ class Gen3Index:
             "description": description,
             "content_created_date": content_created_date,
             "content_updated_date": content_updated_date,
-            "visibility": visibility,
         }
         rec = self.client.get(guid)
         if not rec:
@@ -807,7 +796,6 @@ class Gen3Index:
         description=None,
         content_created_date=None,
         content_updated_date=None,
-        visibility=None,
         **kwargs,
     ):
         """
@@ -832,8 +820,7 @@ class Gen3Index:
                 "description": description,
                 "content_created_date": content_created_date,
                 "content_updated_date": content_updated_date,
-                "visibility": visibility,
-            }
+                }
             record = await self.async_get_record(guid)
             revision = record.get("rev")
 

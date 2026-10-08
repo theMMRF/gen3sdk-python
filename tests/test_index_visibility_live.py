@@ -34,9 +34,8 @@ def records():
         10,
         urls=["s3://test/private"],
         authz=[RESOURCE],
-        visibility="restricted",
     )
-    public = admin.create_record({"md5": "b" * 32}, 1, urls=["s3://test/public"])
+    public = admin.create_record({"md5": "b" * 32}, 1, urls=["s3://test/public"], authz=["/open"])
     try:
         yield private, public
     finally:
@@ -51,11 +50,11 @@ def test_standard_sdk_sync_discovery_and_bulk(records):
     assert [
         record["did"]
         for record in anonymous.get_records([private["did"], public["did"]])
-    ] == [public["did"]]
+    ] == []
     auth = Gen3Auth(endpoint=URL, access_token="allowed")
     authenticated = Gen3Index(auth, service_location="")
     with patch.object(auth, "_get_auth_value", return_value="Bearer allowed"):
-        assert authenticated.get_record(private["did"])["visibility"] == "restricted"
+        assert authenticated.get_record(private["did"])["authz"] == [RESOURCE]
         assert len(authenticated.get_records_on_page()) == 2
         assert len(authenticated.get_records([private["did"], public["did"]])) == 2
 
@@ -66,8 +65,8 @@ def test_standard_sdk_async_discovery(records):
     index = Gen3Index(auth, service_location="")
     with patch.object(auth, "_get_auth_value", return_value="Bearer allowed"):
         assert (
-            asyncio.run(index.async_get_record(private["did"]))["visibility"]
-            == "restricted"
+            asyncio.run(index.async_get_record(private["did"]))["authz"]
+            == [RESOURCE]
         )
         assert len(asyncio.run(index.async_get_records_on_page())) == 2
         assert len(asyncio.run(index.async_get_records_from_checksum("a" * 32))) == 1
@@ -95,7 +94,7 @@ def test_browser_cookie_and_metadata_only_identity(records):
 def test_blank_record_is_private_from_creation():
     admin = Gen3Index(URL, auth_provider=("test", "test"), service_location="")
     blank = admin.create_blank(
-        "owner", "private.txt", authz=[RESOURCE], visibility="restricted"
+        "owner", "private.txt", authz=[RESOURCE]
     )
     try:
         assert Gen3Index(URL, service_location="").get_record(blank["did"]) is None

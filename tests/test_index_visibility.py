@@ -61,14 +61,14 @@ def test_sync_reads_send_auth_to_indexclient():
     response.json.return_value = {
         "did": "private",
         "rev": "1",
-        "visibility": "restricted",
+        "authz": ["/private"],
     }
     with patch("indexclient.client.requests.get", return_value=response) as get:
-        assert index.get_record("private")["visibility"] == "restricted"
+        assert index.get_record("private")["authz"] == ["/private"]
         assert get.call_args.kwargs["auth"] is auth
 
 
-def test_create_new_version_serializes_opt_in_field():
+def test_create_new_version_serializes_existing_authz():
     index = Gen3Index("https://commons.example")
     response = MagicMock(status_code=200)
     response.json.return_value = {"did": "new-version"}
@@ -76,9 +76,9 @@ def test_create_new_version_serializes_opt_in_field():
         index.client, "_post", return_value=response
     ) as post, patch.object(index, "get_record", return_value={}):
         index.create_new_version(
-            "private", {"md5": "a" * 32}, 1, visibility="restricted"
+            "private", {"md5": "a" * 32}, 1, authz=["/private"]
         )
-        assert json.loads(post.call_args.kwargs["data"])["visibility"] == "restricted"
+        assert json.loads(post.call_args.kwargs["data"])["authz"] == ["/private"]
 
 
 def test_blank_record_can_be_restricted_before_upload():
@@ -89,10 +89,9 @@ def test_blank_record_can_be_restricted_before_upload():
         index.client, "_post", return_value=response
     ) as post, patch.object(index, "get_record", return_value={}):
         index.create_blank(
-            "owner", "private.txt", authz=["/private"], visibility="restricted"
+            "owner", "private.txt", authz=["/private"]
         )
         body = json.loads(post.call_args.kwargs["data"])
-        assert body["visibility"] == "restricted"
         assert body["authz"] == ["/private"]
 
 
@@ -101,8 +100,8 @@ def test_get_all_records_authenticates_every_page():
     auth = Gen3Auth(endpoint="https://commons.example", access_token="test-token")
     index = Gen3Index(auth)
     pages = [
-        [{"did": "public", "visibility": "public"}],
-        [{"did": "private", "visibility": "restricted"}],
+        [{"did": "public", "authz": ["/open"]}],
+        [{"did": "private", "authz": ["/private"]}],
         [],
     ]
     responses = []

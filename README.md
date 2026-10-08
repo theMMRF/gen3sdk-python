@@ -57,28 +57,22 @@ gen3 --help
 
 If you encounter issues, raise them on the [Gen3 SDK GitHub Issues page](https://github.com/uc-cdis/gen3sdk-python/issues).
 
-### Selective file discovery (MMRF fork)
+### Project-scoped file discovery (MMRF fork)
 
-`Gen3Index` forwards its configured credentials on synchronous and asynchronous
-reads, including record pages, checksum searches, parameter queries and URL
-queries. Anonymous calls remain anonymous. Optional `visibility="restricted"`
-on create/update/version methods uses the same IndexD API and requires nonempty
-`authz`; omitted version visibility inherits the existing record. Gen3 file
-retrieval and signed downloads continue through the standard Fence paths.
-The paired IndexD service filters restricted metadata using `indexd/read-metadata`
-on every authz resource. Fence separately checks `fence/read-storage` for file
-contents. Assign these roles independently; neither action implies the other.
-Existing pre-feature records stay public. New records are public when visibility
-is omitted; new versions inherit the existing record's visibility when omitted.
-`Gen3File.download_single` uses the GUID as its local filename when the caller
-may download a known file but cannot discover its metadata. This SDK pins the reviewed MMRF indexclient revision so a normal install
-cannot silently use the older client that dropped credentials on GET.
+`Gen3Index` forwards caller credentials on synchronous and asynchronous reads,
+including paging, checksums, URLs and bulk requests. Existing create/update APIs
+and `authz` fields remain unchanged. When IndexD's opt-in
+`PROJECT_VISIBILITY_ENABLED=true` setting is enabled, metadata discovery requires
+`indexd/read-metadata` on every existing `authz` resource. With the setting disabled,
+IndexD retains its public metadata behavior without new grants.
 
-Isolated transport coverage: `pytest --noconftest tests/test_index_visibility.py`.
-Use the coordinated GitOps runbook for staging acceptance with real identities;
-this patch does not grant access or change production configuration.
+Fence independently checks `fence/read-storage` for bytes. Neither action implies
+the other. `Gen3File.download_single` uses the GUID as a local filename when a
+caller may download an already-known GUID but cannot discover its metadata.
+The SDK pins the MMRF indexclient revision that preserves GET credentials.
 
-Private upload placeholders can be created atomically with
-`create_blank(uploader, file_name, authz=["/resource"], visibility="restricted")`.
-Optional real HTTP acceptance uses the disposable IndexD local-server fixture:
+Run transport tests with `pytest --noconftest tests/test_index_visibility.py`.
+Private upload placeholders use the ordinary existing
+`create_blank(uploader, file_name, authz=["/resource"])` API.
+Optional HTTP acceptance uses IndexD's disposable fixture:
 `VISIBILITY_TEST_INDEXD_URL=http://localhost:58001 pytest --noconftest tests/test_index_visibility_live.py`.
