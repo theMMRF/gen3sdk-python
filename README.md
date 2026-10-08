@@ -56,3 +56,23 @@ gen3 --help
 ```
 
 If you encounter issues, raise them on the [Gen3 SDK GitHub Issues page](https://github.com/uc-cdis/gen3sdk-python/issues).
+
+### Project-scoped file discovery (MMRF fork)
+
+`Gen3Index` forwards caller credentials on synchronous and asynchronous reads,
+including paging, checksums, URLs and bulk requests. Existing create/update APIs
+and `authz` fields remain unchanged. When IndexD's opt-in
+`PROJECT_VISIBILITY_ENABLED=true` setting is enabled, metadata discovery requires
+`indexd/read-metadata` on every existing `authz` resource. With the setting disabled,
+IndexD retains its public metadata behavior without new grants.
+
+Fence independently checks `fence/read-storage` for bytes. Neither action implies
+the other. `Gen3File.download_single` uses the GUID as a local filename when a
+caller may download an already-known GUID but cannot discover its metadata.
+The SDK pins the MMRF indexclient revision that preserves GET credentials.
+
+Run transport tests with `pytest --noconftest tests/test_index_visibility.py`.
+Private upload placeholders use the ordinary existing
+`create_blank(uploader, file_name, authz=["/resource"])` API.
+Optional HTTP acceptance uses IndexD's disposable fixture:
+`VISIBILITY_TEST_INDEXD_URL=http://localhost:58001 pytest --noconftest tests/test_index_visibility_live.py`.

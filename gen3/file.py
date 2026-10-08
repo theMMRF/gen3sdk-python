@@ -182,16 +182,19 @@ class Gen3File:
             logging.error(f"Response code: {response.status_code}")
             if response.status_code >= 500:
                 for _ in range(MAX_RETRIES):
+                    response.close()
                     logging.info("Retrying now...")
                     # NOTE could be updated with exponential backoff
                     time.sleep(1)
                     response = requests.get(url["url"], stream=True)
-                    if response.status == 200:
+                    if response.status_code == 200:
                         break
-                if response.status != 200:
+                if response.status_code != 200:
                     logging.critical("Response status not 200, try again later")
+                    response.close()
                     return False
             else:
+                response.close()
                 return False
 
         response.raise_for_status()
@@ -200,9 +203,16 @@ class Gen3File:
         total_downloaded = 0
 
         index = Gen3Index(self._auth_provider)
-        record = index.get_record(object_id)
+        try:
+            record = index.get_record(object_id)
+        except requests.HTTPError as error:
+            if error.response is None or error.response.status_code != 403:
+                raise
+            record = None
 
-        filename = record["file_name"]
+        # Storage authorization can be granted independently of metadata visibility.
+        # A hidden record returns None; its known GUID remains a safe local name.
+        filename = (record or {}).get("file_name") or object_id.rsplit("/", 1)[-1]
 
         out_path = Gen3File._ensure_dirpath_exists(Path(path))
 

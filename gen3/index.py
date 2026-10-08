@@ -51,6 +51,15 @@ class Gen3Index:
         self.endpoint = endpoint
         self.client = client.IndexClient(endpoint, auth=auth_provider)
 
+    def _async_read_credentials(self):
+        """Preserve anonymous, Gen3 bearer and IndexD Basic authentication."""
+        auth = self.client.auth
+        if auth is None:
+            return {}
+        if isinstance(auth, tuple):
+            return {"auth": aiohttp.BasicAuth(*auth)}
+        return {"headers": {"Authorization": auth._get_auth_value()}}
+
     ### Get Requests
     def is_healthy(self):
         """
@@ -168,7 +177,9 @@ class Gen3Index:
         """
         url = f"{self.client.url}/index/{guid}"
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=_ssl) as response:
+            async with session.get(
+                url, ssl=_ssl, **self._async_read_credentials()
+            ) as response:
                 raise_for_status_and_print_error(response)
                 response = await response.json()
 
@@ -198,7 +209,10 @@ class Gen3Index:
 
         url = f"{self.client.url}/index" + "?" + query
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=_ssl) as response:
+            async with session.get(
+                url, ssl=_ssl, **self._async_read_credentials()
+            ) as response:
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response.get("records")
@@ -226,7 +240,10 @@ class Gen3Index:
 
         url = f"{self.client.url}/index" + "?" + query
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=_ssl) as response:
+            async with session.get(
+                url, ssl=_ssl, **self._async_read_credentials()
+            ) as response:
+                raise_for_status_and_print_error(response)
                 response = await response.json()
 
         return response.get("records")
@@ -335,8 +352,10 @@ class Gen3Index:
         query_params = urllib.parse.urlencode(params)
         url = f"{self.client.url}/index/?{query_params}"
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=_ssl) as response:
-                await response.raise_for_status()
+            async with session.get(
+                url, ssl=_ssl, **self._async_read_credentials()
+            ) as response:
+                response.raise_for_status()
                 response = await response.json()
 
         return response
@@ -537,7 +556,7 @@ class Gen3Index:
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **DEFAULT_BACKOFF_SETTINGS)
-    def create_blank(self, uploader, file_name=None):
+    def create_blank(self, uploader, file_name=None, authz=None):
         """
 
         Create a blank record
@@ -550,7 +569,11 @@ class Gen3Index:
             }
 
         """
-        json = {"uploader": uploader, "file_name": file_name}
+        json = {
+            "uploader": uploader,
+            "file_name": file_name,
+            "authz": authz,
+        }
         response = self.client._post(
             "index/blank",
             headers={"content-type": "application/json"},
@@ -797,7 +820,7 @@ class Gen3Index:
                 "description": description,
                 "content_created_date": content_created_date,
                 "content_updated_date": content_updated_date,
-            }
+                }
             record = await self.async_get_record(guid)
             revision = record.get("rev")
 
@@ -886,7 +909,9 @@ class Gen3Index:
         url = f"{self.client.url}/_query/urls/q?include={pattern}"
         async with aiohttp.ClientSession() as session:
             logging.debug(f"request: {url}")
-            async with session.get(url, ssl=_ssl) as response:
+            async with session.get(
+                url, ssl=_ssl, **self._async_read_credentials()
+            ) as response:
                 raise_for_status_and_print_error(response)
                 response = await response.json()
 
